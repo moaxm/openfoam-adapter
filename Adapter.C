@@ -26,10 +26,15 @@ mesh_(mesh)
 bool preciceAdapter::Adapter::configFileRead()
 {
 
+    /**
+    /
+    / THIS IS FOR FLUID1
+    /
+    **/
+    /**
     // preCICE participant name
     participantName_ = "Fluid1";
     DEBUG(adapterInfo("  participant : " + participantName_));
-
     // preCICE configuration file name
     preciceConfigFilename_ = "precice-config.xml";
     DEBUG(adapterInfo("  precice-config-file : " + preciceConfigFilename_));
@@ -53,12 +58,50 @@ bool preciceAdapter::Adapter::configFileRead()
                 DEBUG(adapterInfo("      Velocity, PressureGradient"));
 
         // read-data
+            DEBUG(adapterInfo("    read-data : "));
                 interfaceConfig.readData.push_back("Pressure");
                 DEBUG(adapterInfo("      Pressure"));
+    */
+
+    /**
+    /
+    / THIS IS FOR FLUID2
+    /
+    **/
+
+    // preCICE participant name
+    participantName_ = "Fluid2";
+    DEBUG(adapterInfo("  participant : " + participantName_));
+    // preCICE configuration file name
+    preciceConfigFilename_ = "precice-config.xml";
+    DEBUG(adapterInfo("  precice-config-file : " + preciceConfigFilename_));
+
+    DEBUG(adapterInfo("  interfaces : "));
+        struct InterfaceConfig interfaceConfig;
+        interfaceConfig.meshName = "Fluid2-Mesh";
+        DEBUG(adapterInfo("  - mesh      : " + interfaceConfig.meshName));
+
+        interfaceConfig.locationsType = "faceCenters";
+        DEBUG(adapterInfo("    locations : " + interfaceConfig.locationsType));
+
+        DEBUG(adapterInfo("    patches   : "));
+            interfaceConfig.patchNames.push_back("inlet");
+            DEBUG(adapterInfo("       inlet"));
+
+        // write-data
+            DEBUG(adapterInfo("    write-data : "));
+                interfaceConfig.writeData.push_back("Pressure");
+                DEBUG(adapterInfo("      Pressure"));
+
+        // read-data
+            DEBUG(adapterInfo("    read-data : "));
+                interfaceConfig.readData.push_back("Velocity");
+                interfaceConfig.readData.push_back("PressureGradient");
+                DEBUG(adapterInfo("      Velocity, PressureGradient"));
+
+    /** END OF FLUID1 / FLUID2 MESS **/
 
         interfacesConfig_.push_back(interfaceConfig);
-
-
         FFenabled_ = true;
     DEBUG(adapterInfo("    FF module enabled : " + std::to_string(FFenabled_)));
 

@@ -41,6 +41,6 @@ functions
     preCICE_Adapter
     {
         type preciceAdapterFunctionObject;
-        libs ("libpreciceAdapterFunctionObject.so");
+        libs ("libpreciceAdapterFunctionObject1.so");
     }
 }

@@ -14,4 +14,4 @@ Adapter.C
 
 preciceAdapterFunctionObject.C
 
-LIB = $(ADAPTER_TARGET_DIR)/libpreciceAdapterFunctionObject
+LIB = $(ADAPTER_TARGET_DIR)/libpreciceAdapterFunctionObject2
