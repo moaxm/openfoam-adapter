@@ -56,7 +56,7 @@ void preciceAdapter::FSI::FluidStructureInteraction::addWriters(std::string data
         interface->addCouplingDataWriter
         (
             dataName,
-            new Force(mesh_, runTime_.timeName())
+            new Force(mesh_, runTime_.timeName(), nameRho_, nameU_)
         );
         DEBUG(adapterInfo("Added writer: Force."));
     }
@@ -93,7 +93,7 @@ void preciceAdapter::FSI::FluidStructureInteraction::addReaders(std::string data
         interface->addCouplingDataReader
         (
             dataName,
-            new Force(mesh_, runTime_.timeName())
+            new Force(mesh_, runTime_.timeName(), nameRho_, nameU_)
         );
         DEBUG(adapterInfo("Added reader: Force."));
     }

@@ -31,11 +31,12 @@ protected:
     //- Name of the pointDisplacement field
     std::string namePointDisplacement_ = "pointDisplacement";
 
-    /* TODO: Declare here any parameters that should be read from
-    /  the configuration file. See CHT/CHT.H for reference.
-    /  We want to support in-house solvers with different field names,
-    /  so make sure to declare these here.
-    */
+    //- Name of density field, applies for incompressible multiphase solvers and compressible solvers
+    //  rho value for single phase incompressible solvers is directly determined in Force.C
+    std::string nameRho_ = "rho";
+
+    //- Name of velocity field
+    std::string nameU_ = "U";
 
 protected:
 
