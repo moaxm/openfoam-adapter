@@ -115,6 +115,10 @@ tmp<volScalarField> preciceAdapter::FSI::Force::rho() const
 		const dictionary& transportProperties =
 				mesh_.lookupObject<IOdictionary>("transportProperties");
 
+		//doubleScalar rhoConst = transportProperties.lookup(nameRho_);
+
+		//Info << "Scalar read: " << rhoConst << endl;
+
 		return tmp<volScalarField>
 		(
 				new volScalarField
@@ -126,13 +130,13 @@ tmp<volScalarField> preciceAdapter::FSI::Force::rho() const
 								mesh_
 						),
 						mesh_,
-						transportProperties.lookup(nameRho_)
+						dimensionedScalar(nameRho_, dimDensity, transportProperties)
 				)
 		);
 	}
 }
 
-scalar preciceAdapter::FSI::Force::rho(const volScalarField& p) const
+doubleScalar preciceAdapter::FSI::Force::rho(const volScalarField& p) const
 {
 	if (p.dimensions() == dimPressure)
 	{
@@ -142,10 +146,12 @@ scalar preciceAdapter::FSI::Force::rho(const volScalarField& p) const
 	{
 		if (!mesh_.foundObject<volScalarField>(nameRho_))
 		{
+
+			Info << "rho(p) transportProperties.lookup:"<< endl;
 			const dictionary& transportProperties =
 					mesh_.lookupObject<IOdictionary>("transportProperties");
 
-			return readScalar(transportProperties.lookup(nameRho_));
+			return dimensionedScalar(nameRho_, dimDensity, transportProperties).value();
 		}
 		else
 		{

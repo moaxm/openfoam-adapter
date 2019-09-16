@@ -38,7 +38,7 @@ private:
     Foam::tmp<Foam::volScalarField> rho() const;
 
     //- return scalar density
-    Foam::scalar rho(const Foam::volScalarField& p) const;
+    Foam::doubleScalar rho(const Foam::volScalarField& p) const;
 
 public:
 
