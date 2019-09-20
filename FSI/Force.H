@@ -31,6 +31,9 @@ private:
     //- U name
     const std::string nameU_;
 
+    //- reference pressure
+    const Foam::scalar pRef_;
+
     //- Stress tensor (see the OpenFOAM "Forces" function object)
     Foam::tmp<Foam::volSymmTensorField> devRhoReff() const;
 
@@ -48,7 +51,8 @@ public:
         const Foam::fvMesh& mesh,
         const fileName& timeName, // We create an IOobject and we need the time directory
 		const std::string nameRho,
-		const std::string nameU
+		const std::string nameU,
+		const Foam::scalar pRef
     );
 
     //- Write the displacement values into the buffer

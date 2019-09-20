@@ -7,12 +7,14 @@ preciceAdapter::FSI::Force::Force
     const Foam::fvMesh& mesh,
     const fileName& timeName,
 	const std::string nameRho,
-	const std::string nameU
+	const std::string nameU,
+	const Foam::scalar pRef
 )
 :
 mesh_(mesh),
 nameRho_(nameRho),
-nameU_(nameU)
+nameU_(nameU),
+pRef_(pRef)
 {
     dataType_ = vector;
 
@@ -165,6 +167,7 @@ doubleScalar preciceAdapter::FSI::Force::rho(const volScalarField& p) const
 void preciceAdapter::FSI::Force::write(double * buffer, bool meshConnectivity)
 {
     // Compute forces. See the Forces function object.
+
     // Normal vectors on the boundary, multiplied with the face areas
     const surfaceVectorField::Boundary& Sfb =
         mesh_.Sf().boundaryField();
@@ -180,7 +183,8 @@ void preciceAdapter::FSI::Force::write(double * buffer, bool meshConnectivity)
     const volScalarField& p =
         mesh_.lookupObject<volScalarField>("p");
 
-    // TODO: Add reference pressure
+	// Scale pRef
+	Foam::scalar pRef = pRef_/rho(p);
 
     int bufferIndex = 0;
     
@@ -191,7 +195,7 @@ void preciceAdapter::FSI::Force::write(double * buffer, bool meshConnectivity)
 
         // Pressure forces
         Force_->boundaryFieldRef()[patchID] =
-            rho(p) * Sfb[patchID] * p.boundaryField()[patchID];
+            rho(p) * Sfb[patchID] * (p.boundaryField()[patchID] - pRef);
 
         // Viscous forces
         Force_->boundaryFieldRef()[patchID] +=

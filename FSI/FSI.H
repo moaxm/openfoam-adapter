@@ -38,6 +38,9 @@ protected:
     //- Name of velocity field
     std::string nameU_ = "U";
 
+    //- reference pressure
+    const Foam::scalar pRef_;
+
 protected:
 
     //- Read the FSI-related options from the adapter's configuration file
@@ -47,7 +50,7 @@ public:
 
     //- Constructor
     //  We need also the runTime to access the timeName and the deltaT
-    FluidStructureInteraction(const Foam::fvMesh& mesh, const Foam::Time& runTime);
+    FluidStructureInteraction(const Foam::fvMesh& mesh, const Foam::Time& runTime, const Foam::scalar pRef);
 
     //- Configure
     bool configure(const YAML::Node adapterConfig);

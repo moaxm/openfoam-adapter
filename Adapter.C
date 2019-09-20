@@ -230,6 +230,17 @@ bool preciceAdapter::Adapter::configFileRead()
 
     // NOTE: set the switch for your new module here
 
+    // Set the reference pressure if provided
+    if (adapterConfig_["referencePressure"])
+    {
+    	pRef_ = adapterConfig_["referencePressure"].as<double>();
+    }
+    else
+    {
+    	pRef_ = 0.;
+    }
+    DEBUG(adapterInfo("    Reference Pressure is set to : " + std::to_string(pRef_)));
+
     // If the CHT module is enabled, create it, read the
     // CHT-specific options and configure it.
     if (CHTenabled_)
@@ -257,7 +268,7 @@ bool preciceAdapter::Adapter::configFileRead()
             }
         }
 
-        FSI_ = new FSI::FluidStructureInteraction(mesh_, runTime_);
+        FSI_ = new FSI::FluidStructureInteraction(mesh_, runTime_, pRef_);
         if (!FSI_->configure(adapterConfig_)) return false;
     }
 

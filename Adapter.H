@@ -96,6 +96,9 @@ private:
 
         // NOTE: Add a switch for your new module here
 
+        //- Reference pressure
+        Foam::scalar pRef_;
+
     //- Interfaces
     std::vector<Interface*> interfaces_;
 
