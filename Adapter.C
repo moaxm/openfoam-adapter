@@ -230,6 +230,13 @@ bool preciceAdapter::Adapter::configFileRead()
 
     // NOTE: set the switch for your new module here
 
+    // Read name of coupling scheme
+    if (adapterConfig_["couplingScheme"])
+    {
+    	couplingScheme_ = adapterConfig_["couplingScheme"].as<std::string>();
+    }
+    DEBUG(adapterInfo("    Coupling scheme is set to : " + couplingScheme_));
+
     // Set the reference pressure if provided
     if (adapterConfig_["referencePressure"])
     {
@@ -407,6 +414,12 @@ void preciceAdapter::Adapter::configure()
             adjustSolverTimeStep();
         }
 
+        // Write coupling data at the beginning for certain coupling schemes
+		if (couplingScheme_=="staggered-subiteration-free-3pbdf-cd")
+		{
+			writeCouplingData();
+		}
+
         // If the solver tries to end before the coupling is complete,
         // e.g. because the solver's endTime was smaller or (in implicit
         // coupling) equal with the max-time specified in preCICE,
@@ -431,31 +444,6 @@ void preciceAdapter::Adapter::configure()
                         );
             const_cast<Time&>(runTime_).setEndTime(GREAT);
         }
-
-    // If the solver tries to end before the coupling is complete,
-    // e.g. because the solver's endTime was smaller or (in implicit
-    // coupling) equal with the max-time specified in preCICE,
-    // problems may occur near the end of the simulation,
-    // as the function object may be called only once near the end.
-    // See the implementation of Foam::Time::run() for more details.
-    // To prevent this, we set the solver's endTime to "infinity"
-    // and let only preCICE control the end of the simulation.
-    // This has the side-effect of not triggering the end() method
-    // in any function object normally. Therefore, we trigger it
-    // when preCICE dictates to stop the coupling.
-    // However, the user can disable this behavior in the configuration.
-    if (preventEarlyExit_)
-    {
-        adapterInfo
-        (
-            "Setting the solver's endTime to infinity to prevent early exits. "
-            "Only preCICE will control the simulation's endTime. "
-            "Any functionObject's end() method will be triggered by the adapter. "
-            "You may disable this behavior in the adapter's configuration.",
-            "info"
-       );
-        const_cast<Time&>(runTime_).setEndTime(GREAT);
-    }
 
     } catch (const Foam::error &e) {
         adapterInfo(e.message(), "error-deferred");
@@ -486,8 +474,12 @@ void preciceAdapter::Adapter::execute()
     // if (ncheckpointed is nregisterdobjects. )
 
     // Write the coupling data in the buffer
-    writeCouplingData();
-
+    // for the staggered-subiteration-free-3pbdf-cd, coupling data is no written in the first step
+    if(!((couplingScheme_=="staggered-subiteration-free-3pbdf-cd") &&
+    	 (firstStep_)))
+    {
+    	writeCouplingData();
+    }
     // Advance preCICE
     advance();
 
@@ -663,107 +655,137 @@ void preciceAdapter::Adapter::adjustSolverTimeStep()
        // in the controlDict during the simulation.
     */
 
-    // Is the timestep adjustable or fixed?
-    if (!adjustableTimestep_)
+    // check if couplingScheme is set to a non-standard value
+    if (couplingScheme_=="staggered-subiteration-free-3pbdf-cd")
     {
-        // Have we already stored the timestep?
-        if (!useStoredTimestep_)
-        {
-            // Show a warning if runTimeModifiable is set
-            if (runTime_.runTimeModifiable())
-            {
-                adapterInfo
-                        (
-                            "You have enabled 'runTimeModifiable' in the "
-                            "controlDict. The preciceAdapter does not yet "
-                            "fully support this functionality when "
-                            "'adjustableTimestep' is not enabled. "
-                            "If you modify the 'deltaT' in the controlDict "
-                            "during the simulation, it will not be updated.",
-                            "warning"
-                            );
-            }
+    	double timeStepSolverTmp;
 
-            // Store the value
-            timestepStored_ = runTime_.deltaT().value();
+    	timestepSolver_ = timestepPrecice_;
 
-            // Ok, we stored it once, we will use this from now on
-            useStoredTimestep_ = true;
-        }
+    	if (firstStep_==true)
+    	{
+    		timeStepSolverTmp = timestepSolver_/2.;	// assuming constant dt
+    	    firstStep_=false;
+//    	    adapterInfo("EINS");
+//    	    adapterInfo(std::to_string(timestepSolver_));
+    	}
+    	else
+    	{
+    		timeStepSolverTmp = timestepSolver_; 	// constant dt assumed
+//    		adapterInfo("ZWEI");
+//    		adapterInfo(std::to_string(timestepSolver_));
+    	}
 
-        // Use the stored timestep as the determined solver's timestep
-        timestepSolverDetermined = timestepStored_;
+        // Update the solver's timestep (but don't trigger the adjustDeltaT(),
+        // which also triggers the functionObject's adjustTimeStep())
+        // TODO: Keep this in mind if any relevant problem appears.
+        const_cast<Time&>(runTime_).setDeltaT(timeStepSolverTmp, false);
+
     }
     else
     {
-        // The timestep is adjustable, so OpenFOAM will modify it
-        // and therefore we can use the updated value
-        timestepSolverDetermined = runTime_.deltaT().value();
-    }
+		// Is the timestep adjustable or fixed?
+		if (!adjustableTimestep_)
+		{
+			// Have we already stored the timestep?
+			if (!useStoredTimestep_)
+			{
+				// Show a warning if runTimeModifiable is set
+				if (runTime_.runTimeModifiable())
+				{
+					adapterInfo
+							(
+								"You have enabled 'runTimeModifiable' in the "
+								"controlDict. The preciceAdapter does not yet "
+								"fully support this functionality when "
+								"'adjustableTimestep' is not enabled. "
+								"If you modify the 'deltaT' in the controlDict "
+								"during the simulation, it will not be updated.",
+								"warning"
+								);
+				}
 
-    /* If the solver tries to use a timestep smaller than the one determined
-       by preCICE, that means that the solver is trying to subcycle.
-       This may not be allowed by the user.
-       If the solver tries to use a bigger timestep, then it needs to use
-       the same timestep as the one determined by preCICE.
-    */
+				// Store the value
+				timestepStored_ = runTime_.deltaT().value();
 
-    if (timestepSolverDetermined < timestepPrecice_)
-    {
-        if (!subcyclingAllowed_)
-        {
-            adapterInfo
-                    (
-                        "The solver's timestep cannot be smaller than the "
-                        "coupling timestep, because subcycling is disabled. ",
-                        "error"
-                        );
-        }
-        else
-        {
-            // Add a bool 'subCycling = true' which is checked in the storeMeshPoints() function.
-            adapterInfo
-                    (
-                        "The solver's timestep is smaller than the "
-                        "coupling timestep. Subcycling...",
-                        "info"
-                        );
-            timestepSolver_ = timestepSolverDetermined;
-            // TODO subcycling is enabled. For FSI the oldVolumes must be written, which is normally not done.
-            if (FSIenabled_)
-            {
-                adapterInfo
-                        (
-                            "The adapter does not fully support subcycling for FSI and instabilities may occur.",
-                            "warning"
-                            );
-            }
-        }
-    }
-    else if (timestepSolverDetermined > timestepPrecice_)
-    {
-        adapterInfo
-                (
-                    "The solver's timestep cannot be larger than the coupling timestep."
-                    " Adjusting from " +
-                    std::to_string(timestepSolverDetermined) +
-                    " to " +
-                    std::to_string(timestepPrecice_),
-                    "warning"
-                    );
-        timestepSolver_ = timestepPrecice_;
-    }
-    else
-    {
-        DEBUG(adapterInfo("The solver's timestep is the same as the "
-                          "coupling timestep."));
-        timestepSolver_ = timestepPrecice_;
-    }
+				// Ok, we stored it once, we will use this from now on
+				useStoredTimestep_ = true;
+			}
 
-    // Update the solver's timestep (but don't trigger the adjustDeltaT(),
-    // which also triggers the functionObject's adjustTimeStep())
-    // TODO: Keep this in mind if any relevant problem appears.
-    const_cast<Time&>(runTime_).setDeltaT(timestepSolver_, false);
+			// Use the stored timestep as the determined solver's timestep
+			timestepSolverDetermined = timestepStored_;
+		}
+		else
+		{
+			// The timestep is adjustable, so OpenFOAM will modify it
+			// and therefore we can use the updated value
+			timestepSolverDetermined = runTime_.deltaT().value();
+		}
+
+		/* If the solver tries to use a timestep smaller than the one determined
+		   by preCICE, that means that the solver is trying to subcycle.
+		   This may not be allowed by the user.
+		   If the solver tries to use a bigger timestep, then it needs to use
+		   the same timestep as the one determined by preCICE.
+		*/
+
+		if (timestepSolverDetermined < timestepPrecice_)
+		{
+			if (!subcyclingAllowed_)
+			{
+				adapterInfo
+						(
+							"The solver's timestep cannot be smaller than the "
+							"coupling timestep, because subcycling is disabled. ",
+							"error"
+							);
+			}
+			else
+			{
+				// Add a bool 'subCycling = true' which is checked in the storeMeshPoints() function.
+				adapterInfo
+						(
+							"The solver's timestep is smaller than the "
+							"coupling timestep. Subcycling...",
+							"info"
+							);
+				timestepSolver_ = timestepSolverDetermined;
+				// TODO subcycling is enabled. For FSI the oldVolumes must be written, which is normally not done.
+				if (FSIenabled_)
+				{
+					adapterInfo
+							(
+								"The adapter does not fully support subcycling for FSI and instabilities may occur.",
+								"warning"
+								);
+				}
+			}
+		}
+		else if (timestepSolverDetermined > timestepPrecice_)
+		{
+			adapterInfo
+					(
+						"The solver's timestep cannot be larger than the coupling timestep."
+						" Adjusting from " +
+						std::to_string(timestepSolverDetermined) +
+						" to " +
+						std::to_string(timestepPrecice_),
+						"warning"
+						);
+			timestepSolver_ = timestepPrecice_;
+		}
+		else
+		{
+			DEBUG(adapterInfo("The solver's timestep is the same as the "
+							  "coupling timestep."));
+			timestepSolver_ = timestepPrecice_;
+		}
+
+	    // Update the solver's timestep (but don't trigger the adjustDeltaT(),
+	    // which also triggers the functionObject's adjustTimeStep())
+	    // TODO: Keep this in mind if any relevant problem appears.
+	    const_cast<Time&>(runTime_).setDeltaT(timestepSolver_, false);
+    }
 
     return;
 }
@@ -1511,7 +1533,7 @@ void preciceAdapter::Adapter::readCheckpoint()
             try{
                 // TODO Check if these fields require adding besides only epsilon.
                 // (from Max Mueller's fork)
-                /*
+
                 if ( ("epsilon"  != volScalarFields_.at(i)->name()) &&
                 ("epsilon_0"!= volScalarFields_.at(i)->name()) &&
                 ("omega"    != volScalarFields_.at(i)->name()) &&
@@ -1519,8 +1541,9 @@ void preciceAdapter::Adapter::readCheckpoint()
                 ("cellDisplacementx"!=volScalarFields_.at(i)->name()) &&
                 ("cellDisplacementy"!=volScalarFields_.at(i)->name()) &&
                 ("cellDisplacementz"!=volScalarFields_.at(i)->name()))
-                */
+                /*
                 if ("epsilon" != volScalarFields_.at(i)->name())
+                */
                 {
                     volScalarFields_.at(i)->correctBoundaryConditions();
                 }

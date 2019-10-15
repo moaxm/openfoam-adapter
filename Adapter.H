@@ -96,6 +96,11 @@ private:
 
         // NOTE: Add a switch for your new module here
 
+        //- allow non standard coupling schemes
+        std::string couplingScheme_ = "";
+        bool firstStep_ = true;
+        double lastTimeStep_ = 0.;
+
         //- Reference pressure
         Foam::scalar pRef_;
 

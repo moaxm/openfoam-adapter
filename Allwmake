@@ -5,8 +5,8 @@ cd ${0%/*} || exit 1    # Run from this directory
 # preCICE root path (should be already globally set)
 ADAPTER_PRECICE_ROOT="${PRECICE_ROOT}"
 
-CPLUS_INCLUDE_PATH="/home/max/software/modules/yaml-cpp/0.5.3/include"
-LD_LIBRARY_PATH="/home/max/software/modules/yaml-cpp/0.5.3/lib:${LD_LIBRARY_PATH}"
+CPLUS_INCLUDE_PATH="${HOME}/software/modules/yaml-cpp/0.5.3/include:${HOME}/software/modules/boost/1_65_1/include"
+LD_LIBRARY_PATH="${HOME}/software/modules/yaml-cpp/0.5.3/lib:${LD_LIBRARY_PATH}"
 
 ## preCICE as a static library?
 # If you use preCICE as a static library, then you also need to
@@ -105,7 +105,7 @@ echo ""
 
 # Run wmake (build the adapter) and check the exit code
 echo "Building with WMake (see the wmake.log log file)..."
-wmake ${ADAPTER_WMAKE_OPTIONS} libso > wmake.log 2>&1
+wmake ${ADAPTER_WMAKE_OPTIONS} libso #> wmake.log 2>&1
 echo ""
 if [ $? -ne 0 ] || [ "$(grep -c -E "error:" wmake.log)" -ne 0 ]; then
     echo "Building failed. See wmake.log for more."
