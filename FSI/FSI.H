@@ -5,6 +5,7 @@
 
 #include "FSI/Displacement.H"
 #include "FSI/DisplacementDelta.H"
+#include "FSI/Velocity.H"
 #include "FSI/Force.H"
 
 #include "fvCFD.H"
@@ -30,6 +31,9 @@ protected:
 
     //- Name of the pointDisplacement field
     std::string namePointDisplacement_ = "pointDisplacement";
+
+    //- Name of the pointDisplacement field
+    std::string namePointVelocity_ = "pointMotionU";
 
     //- Name of density field, applies for incompressible multiphase solvers and compressible solvers
     //  rho value for single phase incompressible solvers is directly determined in Force.C

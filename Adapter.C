@@ -1540,7 +1540,10 @@ void preciceAdapter::Adapter::readCheckpoint()
                 ("omega_0"  != volScalarFields_.at(i)->name()) &&
                 ("cellDisplacementx"!=volScalarFields_.at(i)->name()) &&
                 ("cellDisplacementy"!=volScalarFields_.at(i)->name()) &&
-                ("cellDisplacementz"!=volScalarFields_.at(i)->name()))
+                ("cellDisplacementz"!=volScalarFields_.at(i)->name()) &&
+				("cellMotionUx"!=volScalarFields_.at(i)->name()) &&
+				("cellMotionUy"!=volScalarFields_.at(i)->name()) &&
+				("cellMotionUz"!=volScalarFields_.at(i)->name()))
                 /*
                 if ("epsilon" != volScalarFields_.at(i)->name())
                 */

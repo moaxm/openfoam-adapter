@@ -48,6 +48,12 @@ bool preciceAdapter::FSI::FluidStructureInteraction::readConfig(const YAML::Node
     }
     DEBUG(adapterInfo("    pointDisplacement field name : " + namePointDisplacement_));
 
+    if (adapterConfig["namePointVelocity"])
+	{
+		namePointVelocity_ = adapterConfig["namePointVelocity"].as<std::string>();
+	}
+	DEBUG(adapterInfo("    pointVelocity field name : " + namePointVelocity_));
+
     return true;
 }
 
@@ -80,6 +86,15 @@ void preciceAdapter::FSI::FluidStructureInteraction::addWriters(std::string data
         );
         DEBUG(adapterInfo("Added writer: Displacement."));
     }
+    else if (dataName.find("Velocit") == 0)
+	{
+		interface->addCouplingDataWriter
+		(
+			dataName,
+			new Velocity(mesh_, namePointVelocity_)
+		);
+		DEBUG(adapterInfo("Added writer: Velocity."));
+	}
 
     // NOTE: If you want to couple another variable, you need
     // to add your new coupling data user as a coupling data
@@ -90,6 +105,7 @@ void preciceAdapter::FSI::FluidStructureInteraction::addWriters(std::string data
 
 void preciceAdapter::FSI::FluidStructureInteraction::addReaders(std::string dataName, Interface * interface)
 {
+	Info << "DATA NAMEE: " << dataName << endl;
     if (dataName.find("Force") == 0)
     {
         interface->addCouplingDataReader
@@ -117,6 +133,15 @@ void preciceAdapter::FSI::FluidStructureInteraction::addReaders(std::string data
         );
         DEBUG(adapterInfo("Added reader: Displacement."));
     }
+    else if (dataName.find("Velocit") == 0)
+	{
+		interface->addCouplingDataReader
+		(
+			dataName,
+			new Velocity(mesh_, namePointVelocity_)
+		);
+		DEBUG(adapterInfo("Added reader: Velocity."));
+	}
     // NOTE: If you want to couple another variable, you need
     // to add your new coupling data user as a coupling data
     // writer here (and as a writer above).
