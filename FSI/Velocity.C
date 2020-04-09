@@ -18,7 +18,7 @@ pointVelocity_(
     dataType_ = vector;
 }
 
-void preciceAdapter::FSI::Velocity::write(double * buffer, bool meshConnectivity)
+void preciceAdapter::FSI::Velocity::write(double * buffer, bool meshConnectivity, const unsigned int dim)
 {
     /* TODO: Implement
     * We need two nested for-loops for each patch,
@@ -31,7 +31,7 @@ void preciceAdapter::FSI::Velocity::write(double * buffer, bool meshConnectivity
 }
 
 // return the Velocity to use later in the velocity?
-void preciceAdapter::FSI::Velocity::read(double * buffer)
+void preciceAdapter::FSI::Velocity::read(double * buffer, const unsigned int dim)
 {
     // For every element in the buffer
     int bufferIndex = 0;

@@ -18,9 +18,6 @@
 #include "Time.H"
 #include "fvMesh.H"
 
-// Other header files
-// YAML reader - Used to read the adapter's configuration file.
-#include "yaml-cpp/yaml.h"
 // preCICE Solver Interface
 #include "precice/SolverInterface.hpp"
 
@@ -60,27 +57,14 @@ private:
         //- Remember if there were errors in the read() method
         bool errorsInConfigure = false;
 
-        //- preCICE participant name
-        std::string participantName_;
-
         //- preCICE configuration file name
-        std::string preciceConfigFilename_;
+        Foam::word preciceConfigFilename_;
 
-        //- Switch for subcycling
-        bool subcyclingAllowed_ = true;
+        //- preCICE participant name
+        Foam::word participantName_;
 
         //- Switch for checkpointing
         bool checkpointing_ = false;
-
-        //- Switch for automatically preventing the solver from exiting before
-        //  the coupling is complete.
-        bool preventEarlyExit_ = true;
-
-        //- Switch for evaluating the boundaries after reading a checkpoint.
-        bool evaluateBoundaries_ = true;
-
-        //- Switch to disable the checkpointing
-        bool disableCheckpointing_ = false;
 
         //- Type of timestep (fixed, adjustable)
         bool adjustableTimestep_;
@@ -100,9 +84,6 @@ private:
         std::string couplingScheme_ = "";
         bool firstStep_ = true;
         double lastTimeStep_ = 0.;
-
-        //- Reference pressure
-        Foam::scalar pRef_;
 
     //- Interfaces
     std::vector<Interface*> interfaces_;
@@ -143,10 +124,10 @@ private:
         //- Checkpointed mesh points
         Foam::pointField meshPoints_;
         Foam::pointField oldMeshPoints_;
-        bool meshCheckPointed = false; 
+        bool meshCheckPointed = false;
 
         // TODO: Currently unused, see storeMeshPoints().
-        //- Checkpointed mesh volume 
+        //- Checkpointed mesh volume
         // bool oldVolsStored = false;
         // Foam::volScalarField::Internal * oldVols_;
         // Foam::volScalarField::Internal * oldOldVols_;
@@ -165,14 +146,14 @@ private:
 
             //- Checkpointed surfaceVectorField mesh fields (copies)
             std::vector<Foam::surfaceVectorField*> meshSurfaceVectorFieldCopies_;
-        
+
             //- Checkpointed volVectorField mesh fields
             std::vector<Foam::volVectorField*> meshVolVectorFields_;
 
             //- Checkpointed volVectorField mesh fields (copies)
             std::vector<Foam::volVectorField*> meshVolVectorFieldCopies_;
 
-            // TODO checkpoint for the V0 (Old volume) and V00 (Old-Old volume) fields. 
+            // TODO checkpoint for the V0 (Old volume) and V00 (Old-Old volume) fields.
             //- Checkpointed volScalarField mesh fields
             std::vector<Foam::volScalarField::Internal*> volScalarInternalFields_;
 
@@ -276,7 +257,7 @@ private:
         bool isCouplingOngoing();
 
         //- Determine if the coupling timestep has been completed
-        bool isCouplingTimestepComplete();
+        bool isCouplingTimeWindowComplete();
 
         //- Determine if a checkpoint must be read
         bool isReadCheckpointRequired();
@@ -375,11 +356,11 @@ private:
         //- Write the checkpoint - store the fields and time
         void writeCheckpoint();
 
-        // TODO Probably these can be included to the mesh checkpoints. 
+        // TODO Probably these can be included to the mesh checkpoints.
         //- Read the volume checkpoint - restore the mesh volume fields
         void readVolCheckpoint();
 
-        //- Write the volume checkpoint to a buffer - restore the mesh volume fields 
+        //- Write the volume checkpoint to a buffer - restore the mesh volume fields
         void writeVolCheckpoint();
 
     //- Destroy the preCICE interface and delete the allocated

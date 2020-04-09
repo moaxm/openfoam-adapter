@@ -12,13 +12,13 @@ CHT/SinkTemperature.C
 
 CHT/CHT.C
 
-FSI/FSI.C
 FSI/Force.C
 FSI/Displacement.C
 FSI/Velocity.C
 FSI/VelocityStabilized.C
 FSI/DisplacementDelta.C
 
+FSI/FSI.C
 
 Adapter.C
 

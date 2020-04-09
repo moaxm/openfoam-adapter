@@ -30,10 +30,10 @@ public:
     );
 
     //- Write the Velocity values into the buffer
-    void write(double * buffer, bool meshConnectivity);
+    void write(double * buffer, bool meshConnectivity, const unsigned int dim);
 
     //- Read the Velocity values from the buffer
-    void read(double * buffer);
+    void read(double * buffer, const unsigned int dim);
 };
 
 }

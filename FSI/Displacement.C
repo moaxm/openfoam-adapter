@@ -18,7 +18,7 @@ pointDisplacement_(
     dataType_ = vector;
 }
 
-void preciceAdapter::FSI::Displacement::write(double * buffer, bool meshConnectivity)
+void preciceAdapter::FSI::Displacement::write(double * buffer, bool meshConnectivity, const unsigned int dim)
 {
     /* TODO: Implement
     * We need two nested for-loops for each patch,
@@ -31,7 +31,7 @@ void preciceAdapter::FSI::Displacement::write(double * buffer, bool meshConnecti
 }
 
 // return the displacement to use later in the velocity?
-void preciceAdapter::FSI::Displacement::read(double * buffer)
+void preciceAdapter::FSI::Displacement::read(double * buffer, const unsigned int dim)
 {
     // For every element in the buffer
     int bufferIndex = 0;
@@ -48,14 +48,14 @@ void preciceAdapter::FSI::Displacement::read(double * buffer)
                 pointDisplacement_->boundaryFieldRef()[patchID]
             );
 
-
-		// For every cell of the patch
-		forAll(pointDisplacement_->boundaryFieldRef()[patchID], i)
-		{
-			// Set the displacement to the received one
-			pointDisplacementFluidPatch[i][0] = buffer[bufferIndex++];
-			pointDisplacementFluidPatch[i][1] = buffer[bufferIndex++];
-			pointDisplacementFluidPatch[i][2] = buffer[bufferIndex++];
-		}
+        // For every cell of the patch
+        forAll(pointDisplacement_->boundaryFieldRef()[patchID], i)
+        {
+            // Set the displacement to the received one
+            pointDisplacementFluidPatch[i][0] = buffer[bufferIndex++];
+            pointDisplacementFluidPatch[i][1] = buffer[bufferIndex++];
+            if(dim ==3)
+                pointDisplacementFluidPatch[i][2] = buffer[bufferIndex++];
+        }
     }
 }

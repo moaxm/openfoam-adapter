@@ -39,10 +39,10 @@ public:
     );
 
     //- Write the heat transfer coefficient values into the buffer
-    virtual void write(double * buffer, bool meshConnectivity);
+    virtual void write(double * buffer, bool meshConnectivity, const unsigned int dim);
 
     //- Read the heat transfer coefficient values from the buffer
-    virtual void read(double * buffer);
+    virtual void read(double * buffer, const unsigned int dim);
 
     //- Destructor
     virtual ~HeatTransferCoefficient(){};
@@ -104,7 +104,6 @@ public:
     (
         const Foam::fvMesh& mesh,
         const std::string nameT,
-        const std::string nameTransportProperties,
         const std::string nameRho,
         const std::string nameCp,
         const std::string namePr,
@@ -141,7 +140,6 @@ public:
     (
         const Foam::fvMesh& mesh,
         const std::string nameT,
-        const std::string nameTransportProperties,
         const std::string nameKappa
     );
 

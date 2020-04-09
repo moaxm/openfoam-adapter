@@ -26,7 +26,7 @@ preciceAdapter::CHT::HeatTransferCoefficient::HeatTransferCoefficient
 }
 
 
-void preciceAdapter::CHT::HeatTransferCoefficient::write(double * buffer, bool meshConnectivity)
+void preciceAdapter::CHT::HeatTransferCoefficient::write(double * buffer, bool meshConnectivity, const unsigned int dim)
 {
     int bufferIndex = 0;
 
@@ -77,7 +77,7 @@ void preciceAdapter::CHT::HeatTransferCoefficient::write(double * buffer, bool m
 }
 
 
-void preciceAdapter::CHT::HeatTransferCoefficient::read(double * buffer)
+void preciceAdapter::CHT::HeatTransferCoefficient::read(double * buffer, const unsigned int dim)
 {
     int bufferIndex = 0;
 
@@ -158,7 +158,6 @@ HeatTransferCoefficient_Incompressible
 (
         const Foam::fvMesh& mesh,
         const std::string nameT,
-        const std::string nameTransportProperties,
         const std::string nameRho,
         const std::string nameCp,
         const std::string namePr,
@@ -166,7 +165,7 @@ HeatTransferCoefficient_Incompressible
         )
     :
       HeatTransferCoefficient(mesh, nameT),
-      Kappa_(new KappaEff_Incompressible(mesh, nameTransportProperties, nameRho, nameCp, namePr, nameAlphat))
+      Kappa_(new KappaEff_Incompressible(mesh, nameRho, nameCp, namePr, nameAlphat))
 {
 }
 
@@ -195,12 +194,11 @@ HeatTransferCoefficient_Basic
 (
         const Foam::fvMesh& mesh,
         const std::string nameT,
-        const std::string nameTransportProperties,
         const std::string nameKappa
         )
     :
       HeatTransferCoefficient(mesh, nameT),
-      Kappa_(new KappaEff_Basic(mesh, nameTransportProperties, nameKappa))
+      Kappa_(new KappaEff_Basic(mesh, nameKappa))
 {
 }
 

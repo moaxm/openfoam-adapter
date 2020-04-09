@@ -5,9 +5,14 @@
 
 #include "fvCFD.H"
 #include "singlePhaseTransportModel.H"
-#include "turbulentTransportModel.H"
-#include "turbulentFluidThermoModel.H"
 #include "fixedValuePointPatchFields.H"
+
+// TEMPORARY
+#include "pointFields.H"
+#include "vectorField.H"
+#include "immiscibleIncompressibleTwoPhaseMixture.H"
+#include "turbulentFluidThermoModel.H"
+#include "turbulentTransportModel.H"
 
 namespace preciceAdapter
 {
@@ -23,17 +28,14 @@ private:
     //- OpenFOAM fvMesh object (we need to access the objects' registry multiple times)
     const Foam::fvMesh& mesh_;
     
+    const std::string solverType_;
+
     //- Force field
     Foam::volVectorField * Force_;
 
-    //- Rho name
-    const std::string nameRho_;
-
-    //- U name
-    const std::string nameU_;
 
     //- reference pressure
-    const Foam::scalar pRef_;
+    Foam::scalar pRef_;
 
     //~ //- force stabilization factor
     //~ const Foam::scalar forceStabFac_;
@@ -44,12 +46,11 @@ private:
 
     //- Stress tensor (see the OpenFOAM "Forces" function object)
     Foam::tmp<Foam::volSymmTensorField> devRhoReff() const;
-
-    //-  return Density field
+    
     Foam::tmp<Foam::volScalarField> rho() const;
+    
+    Foam::tmp<Foam::volScalarField> mu() const;
 
-    //- return scalar density
-    Foam::doubleScalar rho(const Foam::volScalarField& p) const;
 
 public:
 
@@ -57,18 +58,22 @@ public:
     Force
     (
         const Foam::fvMesh& mesh,
-        const fileName& timeName, // We create an IOobject and we need the time directory
-		const std::string nameRho,
-		const std::string nameU,
-		const Foam::scalar pRef //,
 		//~ const Foam::scalar forceStabFac
+        const fileName& timeName,
+        const std::string solverType
+        // We create an IOobject and we need the time directory
+        /* TODO: We should add any required field names here.
+        /  They would need to be vector fields.
+        /  See CHT/Temperature.H for details.
+        /  Apply any changes also to Force.C.
+        */
     );
 
     //- Write the displacement values into the buffer
-    void write(double * buffer, bool meshConnectivity);
+    void write(double * buffer, bool meshConnectivity, const unsigned int dim);
 
     //- Read the displacement values from the buffer
-    void read(double * buffer);
+    void read(double * buffer, const unsigned int dim);
 
     //- Destructor
     ~Force();

@@ -35,11 +35,11 @@ public:
 
     //- Compute heat flux values from the temperature field
     //  and write them into the buffer
-    virtual void write(double * buffer, bool meshConnectivity);
+    virtual void write(double * buffer, bool meshConnectivity, const unsigned int dim);
 
     //- Read heat flux values from the buffer and assign them to
     //  the gradient of the temperature field
-    virtual void read(double * buffer);
+    virtual void read(double * buffer, const unsigned int dim);
 
     //- Destructor
     virtual ~HeatFlux(){};
@@ -101,7 +101,6 @@ public:
     (
         const Foam::fvMesh& mesh,
         const std::string nameT,
-        const std::string nameTransportProperties,
         const std::string nameRho,
         const std::string nameCp,
         const std::string namePr,
@@ -137,7 +136,6 @@ public:
     (
         const Foam::fvMesh& mesh,
         const std::string nameT,
-        const std::string nameTransportProperties,
         const std::string nameKappa
     );
 
