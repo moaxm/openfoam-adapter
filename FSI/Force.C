@@ -8,13 +8,16 @@ preciceAdapter::FSI::Force::Force
     const fileName& timeName,
 	const std::string nameRho,
 	const std::string nameU,
-	const Foam::scalar pRef
+	const Foam::scalar pRef //,
+	//~ const Foam::scalar forceStabFac
 )
 :
 mesh_(mesh),
 nameRho_(nameRho),
 nameU_(nameU),
-pRef_(pRef)
+pRef_(pRef) //,
+//forceStabFac_(forceStabFac),
+//vz_(1.)
 {
     dataType_ = vector;
 
@@ -36,6 +39,25 @@ pRef_(pRef)
             Foam::vector::zero
         )
     );
+
+    //~ dPenal_ = new volVectorField
+    //~ (
+        //~ IOobject
+        //~ (
+            //~ "dPenal",
+            //~ timeName,
+            //~ mesh,
+            //~ IOobject::NO_READ,
+            //~ IOobject::AUTO_WRITE
+        //~ ),
+        //~ mesh,
+        //~ dimensionedVector
+        //~ (
+            //~ "fdim",
+            //~ dimensionSet(0,1,0,0,0,0,0),
+            //~ Foam::vector::zero
+        //~ )
+    //~ );
 }
 
 Foam::tmp<Foam::volSymmTensorField> preciceAdapter::FSI::Force::devRhoReff() const
@@ -183,19 +205,48 @@ void preciceAdapter::FSI::Force::write(double * buffer, bool meshConnectivity)
     const volScalarField& p =
         mesh_.lookupObject<volScalarField>("p");
 
+    //~ // cell motion or displacements
+    //~ if (mesh_.foundObject<volVectorField>("cellMotionU"))
+    //~ {
+    	//~ const volVectorField& cellVelocity_(mesh_.lookupObject<volVectorField>("cellMotionU"));
+    	//~ *dPenal_ = (cellVelocity_.oldTime()-cellVelocity_.oldTime().oldTime())/(1*mesh_.time().deltaT().value());
+    //~ }
+    //~ else if (mesh_.foundObject<volVectorField>("cellDisplacement"))
+    //~ {
+    	//~ const volVectorField& cellDisplacement_(mesh_.lookupObject<volVectorField>("cellDisplacement"));
+    	//~ *dPenal_ = (cellDisplacement_-2*cellDisplacement_.oldTime()+cellDisplacement_.oldTime().oldTime())/(2*mesh_.time().deltaT().value());
+
+//    	Info << "cellDisplacement_: " << cellDisplacement_ << endl;
+//    	Info << "cellDisplacement_: " << cellDisplacement_.oldTime() << endl;
+//    	Info << "cellDisplacement_: " << cellDisplacement_.oldTime().oldTime() << endl;
+    //~ }
+
 	// Scale pRef
 	Foam::scalar pRef = pRef_/rho(p);
 
     int bufferIndex = 0;
     
+    // rho tmp
+    const volScalarField rhoTmp = mesh_.lookupObject<volScalarField>(nameRho_);
+
     // For every boundary patch of the interface
     for (uint j = 0; j < patchIDs_.size(); j++)
     {
         int patchID = patchIDs_.at(j);
 
+        //~ // pressure penalty
+        //~ scalarField pPenal = rhoTmp.boundaryField()[patchID] * (mesh_.boundary()[patchID].nf() & dPenal_->boundaryField()[patchID]);
+
+        //~ Foam::scalar penalFac = forceStabFac_;
+
+        scalarField pBC = p.boundaryField()[patchID]; // + penalFac * pPenal;
+
+//        Info << "pressure penalty: " << endl;
+//        Info << penalFac * pPenal << endl;
+
         // Pressure forces
         Force_->boundaryFieldRef()[patchID] =
-            rho(p) * Sfb[patchID] * (p.boundaryField()[patchID] - pRef);
+            rho(p) * Sfb[patchID] * (pBC - pRef);
 
         // Viscous forces
         Force_->boundaryFieldRef()[patchID] +=

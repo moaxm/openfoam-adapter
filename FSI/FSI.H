@@ -6,6 +6,7 @@
 #include "FSI/Displacement.H"
 #include "FSI/DisplacementDelta.H"
 #include "FSI/Velocity.H"
+#include "FSI/VelocityStabilized.H"
 #include "FSI/Force.H"
 
 #include "fvCFD.H"
@@ -44,6 +45,10 @@ protected:
 
     //- reference pressure
     const Foam::scalar pRef_;
+
+    //~ //- stabilization factors
+    //~ Foam::scalar velocStabFac_ = 0.;
+    //~ Foam::scalar forceStabFac_ = 0.;
 
 protected:
 

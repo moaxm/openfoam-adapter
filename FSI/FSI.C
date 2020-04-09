@@ -54,6 +54,18 @@ bool preciceAdapter::FSI::FluidStructureInteraction::readConfig(const YAML::Node
 	}
 	DEBUG(adapterInfo("    pointVelocity field name : " + namePointVelocity_));
 
+	//~ if (adapterConfig["velocityStabilizationFactor"])
+	//~ {
+		//~ velocStabFac_ = adapterConfig["velocityStabilizationFactor"].as<double>();
+	//~ }
+	//~ DEBUG(adapterInfo("     velocStabFac_ value is : " + std::to_string(velocStabFac_)));
+
+	//~ if (adapterConfig["forceStabilizationFactor"])
+	//~ {
+		//~ forceStabFac_ = adapterConfig["forceStabilizationFactor"].as<double>();
+	//~ }
+	//~ DEBUG(adapterInfo("     forceStabFac_ value is : " + std::to_string(forceStabFac_)));
+
     return true;
 }
 
@@ -64,7 +76,7 @@ void preciceAdapter::FSI::FluidStructureInteraction::addWriters(std::string data
         interface->addCouplingDataWriter
         (
             dataName,
-            new Force(mesh_, runTime_.timeName(), nameRho_, nameU_, pRef_)
+            new Force(mesh_, runTime_.timeName(), nameRho_, nameU_, pRef_) //, forceStabFac_)
         );
         DEBUG(adapterInfo("Added writer: Force."));
     }
@@ -86,6 +98,15 @@ void preciceAdapter::FSI::FluidStructureInteraction::addWriters(std::string data
         );
         DEBUG(adapterInfo("Added writer: Displacement."));
     }
+    //~ else if (dataName.find("VelocityStabilized") == 0)
+	//~ {
+		//~ interface->addCouplingDataWriter
+		//~ (
+			//~ dataName,
+			//~ new VelocityStabilized(mesh_, namePointVelocity_, velocStabFac_)
+		//~ );
+		//~ DEBUG(adapterInfo("Added writer: VelocityStabilized."));
+	//~ }
     else if (dataName.find("Velocit") == 0)
 	{
 		interface->addCouplingDataWriter
@@ -111,7 +132,7 @@ void preciceAdapter::FSI::FluidStructureInteraction::addReaders(std::string data
         interface->addCouplingDataReader
         (
             dataName,
-            new Force(mesh_, runTime_.timeName(), nameRho_, nameU_, pRef_)
+            new Force(mesh_, runTime_.timeName(), nameRho_, nameU_, pRef_) //, forceStabFac_)
         );
         DEBUG(adapterInfo("Added reader: Force."));
     }
@@ -133,6 +154,15 @@ void preciceAdapter::FSI::FluidStructureInteraction::addReaders(std::string data
         );
         DEBUG(adapterInfo("Added reader: Displacement."));
     }
+    //~ else if (dataName.find("VelocityStabilized") == 0)
+	//~ {
+		//~ interface->addCouplingDataReader
+		//~ (
+			//~ dataName,
+			//~ new VelocityStabilized(mesh_, namePointVelocity_, velocStabFac_)
+		//~ );
+		//~ DEBUG(adapterInfo("Added reader: VelocityStabilized."));
+	//~ }
     else if (dataName.find("Velocit") == 0)
 	{
 		interface->addCouplingDataReader

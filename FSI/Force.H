@@ -7,6 +7,7 @@
 #include "singlePhaseTransportModel.H"
 #include "turbulentTransportModel.H"
 #include "turbulentFluidThermoModel.H"
+#include "fixedValuePointPatchFields.H"
 
 namespace preciceAdapter
 {
@@ -34,6 +35,13 @@ private:
     //- reference pressure
     const Foam::scalar pRef_;
 
+    //~ //- force stabilization factor
+    //~ const Foam::scalar forceStabFac_;
+
+    //~ //- stabiulzation difference
+    //~ Foam::volVectorField * dPenal_;
+    //~ Foam::scalar vz_;
+
     //- Stress tensor (see the OpenFOAM "Forces" function object)
     Foam::tmp<Foam::volSymmTensorField> devRhoReff() const;
 
@@ -52,7 +60,8 @@ public:
         const fileName& timeName, // We create an IOobject and we need the time directory
 		const std::string nameRho,
 		const std::string nameU,
-		const Foam::scalar pRef
+		const Foam::scalar pRef //,
+		//~ const Foam::scalar forceStabFac
     );
 
     //- Write the displacement values into the buffer
