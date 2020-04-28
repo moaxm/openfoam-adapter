@@ -48,8 +48,9 @@ private:
     Foam::tmp<Foam::volSymmTensorField> devRhoReff() const;
     
     Foam::tmp<Foam::volScalarField> rho() const;
+    Foam::doubleScalar rho(const volScalarField& p) const;
     
-    Foam::tmp<Foam::volScalarField> mu() const;
+    //~ Foam::tmp<Foam::volScalarField> mu() const;
 
 
 public:

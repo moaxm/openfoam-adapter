@@ -1,16 +1,13 @@
 #include "Force.H"
 
+#include "Utilities.H"
+
 using namespace Foam;
 
 preciceAdapter::FSI::Force::Force
 (
     const Foam::fvMesh& mesh,
     const fileName& timeName,
-	//~ const Foam::scalar forceStabFac
-//)
-//:
-//forceStabFac_(forceStabFac),
-//vz_(1.)
     const std::string solverType
     /* TODO: We should add any required field names here.
     /  They would need to be vector fields.
@@ -20,9 +17,10 @@ preciceAdapter::FSI::Force::Force
 :
 mesh_(mesh),
 solverType_(solverType),
-pRef_(1.)
+pRef_(0.)
 {
     //What about type "basic"?
+    Info << "Solver type is: " << solverType_ << endl;
     if (solverType_.compare("incompressible") != 0 && solverType_.compare("compressible") != 0) 
     {
         FatalErrorInFunction
@@ -51,34 +49,17 @@ pRef_(1.)
             Foam::vector::zero
         )
     );
+
     
     // get pRef_
     const dictionary& FSIDict =
             mesh_.lookupObject<IOdictionary>("preciceDict").subOrEmptyDict("FSI");
     if (FSIDict.found("pRef"))
     {
-        FSIDict.lookup("pRef").read(pRef_);
-        Info << "Reference pressure was set to: " << pRef_ << endl;
+    //    FSIDict.lookup("pRef").read(pRef_);
+        FSIDict.lookup("pRef") >> pRef_;
+        DEBUG(adapterInfo("Reference pressure was set to: " + name(pRef_)));
     }
-
-    //~ dPenal_ = new volVectorField
-    //~ (
-        //~ IOobject
-        //~ (
-            //~ "dPenal",
-            //~ timeName,
-            //~ mesh,
-            //~ IOobject::NO_READ,
-            //~ IOobject::AUTO_WRITE
-        //~ ),
-        //~ mesh,
-        //~ dimensionedVector
-        //~ (
-            //~ "fdim",
-            //~ dimensionSet(0,1,0,0,0,0,0),
-            //~ Foam::vector::zero
-        //~ )
-    //~ );
 }
 
 //Calculate viscous force
@@ -88,6 +69,7 @@ Foam::tmp<Foam::volSymmTensorField> preciceAdapter::FSI::Force::devRhoReff() con
     typedef compressible::turbulenceModel cmpTurbModel;
     typedef incompressible::turbulenceModel icoTurbModel;   
     
+    //- Turbulent, compressible
     if (mesh_.foundObject<cmpTurbModel>(cmpTurbModel::propertiesName))
     {        
         const cmpTurbModel& turb =
@@ -96,6 +78,7 @@ Foam::tmp<Foam::volSymmTensorField> preciceAdapter::FSI::Force::devRhoReff() con
         return turb.devRhoReff();
 
     }    
+    //- Turbulent, incompressible
     else if (mesh_.foundObject<icoTurbModel>(icoTurbModel::propertiesName))
     {        
         const incompressible::turbulenceModel& turb =
@@ -103,16 +86,49 @@ Foam::tmp<Foam::volSymmTensorField> preciceAdapter::FSI::Force::devRhoReff() con
             
         return rho()*turb.devReff();        
     }
-    else
-    {        
-        // For laminar flows get the velocity  
-        const volVectorField& U = mesh_.lookupObject<volVectorField>("U");
-        
-        return -mu()*dev(twoSymm(fvc::grad(U)));
-    }
+	//- Laminar, compressible
+	else if (mesh_.foundObject<fluidThermo>(fluidThermo::dictName))
+	{
+		const fluidThermo& thermo =
+				mesh_.lookupObject<fluidThermo>(fluidThermo::dictName);
+
+		const volVectorField& U = mesh_.lookupObject<volVectorField>("U");
+
+		return -thermo.mu()*dev(twoSymm(fvc::grad(U)));
+	}
+	//- Laminar transport model
+	else if(mesh_.foundObject<transportModel>("transportProperties"))
+	{
+		const transportModel& laminarT =
+				mesh_.lookupObject<transportModel>("transportProperties");
+
+		const volVectorField& U = mesh_.lookupObject<volVectorField>("U");
+
+		return -rho()*laminarT.nu()*dev(twoSymm(fvc::grad(U)));
+	}
+
+	//- Direct calculation of laminar viscous stresses
+	else if (mesh_.foundObject<dictionary>("transportProperties"))
+	{
+		const dictionary& transportProperties =
+				mesh_.lookupObject<dictionary>("transportProperties");
+
+		dimensionedScalar nu(transportProperties.lookup("nu"));
+
+		const volVectorField& U = mesh_.lookupObject<volVectorField>("U");
+
+		return -rho() * nu * dev(twoSymm(fvc::grad(U)));
+	}
+
+	else
+	{
+	    FatalErrorInFunction
+	        << "No valid model for viscous stress calculation available."
+	        << exit(FatalError);
+	}
 }
 
-//lookup correct rho
+//lookup correct rho (field value)
 Foam::tmp<Foam::volScalarField> preciceAdapter::FSI::Force::rho() const
 {
     // If volScalarField exists, read it from registry (for compressible cases)
@@ -122,7 +138,7 @@ Foam::tmp<Foam::volScalarField> preciceAdapter::FSI::Force::rho() const
     {        
         return mesh_.lookupObject<volScalarField>("rho");            
     }
-    else if (solverType_.compare("incompressible") == 0)
+    else //if (solverType_.compare("incompressible") == 0)
     {        
         const dictionary& FSIDict =
             mesh_.lookupObject<IOdictionary>("preciceDict").subOrEmptyDict("FSI");
@@ -133,7 +149,7 @@ Foam::tmp<Foam::volScalarField> preciceAdapter::FSI::Force::rho() const
             (
                 IOobject
                 (
-                    "rho",
+                    "rho_const",
                     mesh_.time().timeName(),
                     mesh_,
                     IOobject::NO_READ,
@@ -145,62 +161,87 @@ Foam::tmp<Foam::volScalarField> preciceAdapter::FSI::Force::rho() const
         );
         
     } 
-    else
-    {
-        FatalErrorInFunction
-            << "Did not find the correct rho."
-            << exit(FatalError);
+    //~ else
+    //~ {
+        //~ FatalErrorInFunction
+            //~ << "Did not find the correct rho."
+            //~ << exit(FatalError);
             
-        return volScalarField::null();
-    }
+        //~ return volScalarField::null();
+    //~ }
 }
 
-//lookup correct mu
-Foam::tmp<Foam::volScalarField> preciceAdapter::FSI::Force::mu() const
-{ 
+//lookup correct rho (constant scalar value)
+Foam::doubleScalar preciceAdapter::FSI::Force::rho(const volScalarField& p) const
+{
+	if (p.dimensions() == dimPressure)
+	{
+		return 1.0;
+	}
+	else
+	{
+		if (!mesh_.foundObject<volScalarField>("rho"))
+		{
+	        const dictionary& FSIDict =
+	            mesh_.lookupObject<IOdictionary>("preciceDict").subOrEmptyDict("FSI");
+			return dimensionedScalar(FSIDict.lookup("rho")).value();
+		}
+		else
+		{
+			FatalErrorInFunction
+				<< "Rho cannot be a field if kinematic pressure is provided."
+				<< exit(FatalError);
+		}
+	}
+}
 
-    if (solverType_.compare("incompressible") == 0)
-    {
-        typedef immiscibleIncompressibleTwoPhaseMixture iitpMixture;
-        if (mesh_.foundObject<iitpMixture>("mixture"))
-        {
-            const iitpMixture& mixture =
-                mesh_.lookupObject<iitpMixture>("mixture");
+
+//~ //lookup correct mu
+//~ Foam::tmp<Foam::volScalarField> preciceAdapter::FSI::Force::mu() const
+//~ { 
+
+    //~ if (solverType_.compare("incompressible") == 0)
+    //~ {
+        //~ typedef immiscibleIncompressibleTwoPhaseMixture iitpMixture;
+        //~ if (mesh_.foundObject<iitpMixture>("mixture"))
+        //~ {
+            //~ const iitpMixture& mixture =
+                //~ mesh_.lookupObject<iitpMixture>("mixture");
                 
-            return mixture.mu();
-        }
-        else
-        {        
+            //~ return mixture.mu();
+        //~ }
+        //~ else
+        //~ {        
         
-            const dictionary& FSIDict =
-                mesh_.lookupObject<IOdictionary>("preciceDict").subOrEmptyDict("FSI");
+            //~ const dictionary& FSIDict =
+                //~ mesh_.lookupObject<IOdictionary>("preciceDict").subOrEmptyDict("FSI");
                 
-            dimensionedScalar nu(FSIDict.lookup("nu"));       
+            //~ dimensionedScalar nu(FSIDict.lookup("nu"));       
             
-            return tmp<volScalarField>
-            (
-                new volScalarField
-                (  
-                    nu*rho()
-                )
-            );
-        }
+            //~ return tmp<volScalarField>
+            //~ (
+                //~ new volScalarField
+                //~ (  
+                    //~ nu*rho()
+                //~ )
+            //~ );
+        //~ }
 
-    }
-    else if (solverType_.compare("compressible") == 0)
-    {
-        return mesh_.lookupObject<volScalarField>("thermo:mu");
-    }
-    else
-    {
-        FatalErrorInFunction
-            << "Did not find the correct mu."
-            << exit(FatalError);
+    //~ }
+    //~ else if (solverType_.compare("compressible") == 0)
+    //~ {
+        //~ return mesh_.lookupObject<volScalarField>("thermo:mu");
+    //~ }
+    //~ else
+    //~ {
+        //~ FatalErrorInFunction
+            //~ << "Did not find the correct mu."
+            //~ << exit(FatalError);
             
-        return volScalarField::null();
-    }
+        //~ return volScalarField::null();
+    //~ }
 
-}
+//~ }
 
 void preciceAdapter::FSI::Force::write(double * buffer, bool meshConnectivity, const unsigned int dim)
 {
@@ -210,11 +251,12 @@ void preciceAdapter::FSI::Force::write(double * buffer, bool meshConnectivity, c
     const surfaceVectorField::Boundary& Sfb =
         mesh_.Sf().boundaryField();
 
-
-    // Stress tensor boundary field
+    // Stress tensor
     tmp<volSymmTensorField> tdevRhoReff = devRhoReff();
-    const volSymmTensorField::Boundary& devRhoReffb =
-        tdevRhoReff().boundaryField();
+    
+    // Stress tensor boundary field
+    const volSymmTensorField::Boundary& devRhoReffb
+        = tdevRhoReff().boundaryField();
 
     // Density boundary field
     tmp<volScalarField> trho = rho();
@@ -224,26 +266,10 @@ void preciceAdapter::FSI::Force::write(double * buffer, bool meshConnectivity, c
     // Pressure boundary field
     tmp<volScalarField> tp = mesh_.lookupObject<volScalarField>("p");
     const volScalarField::Boundary& pb =
-        tp().boundaryField();        
+        tp().boundaryField();
 
-
-    //~ // cell motion or displacements
-    //~ if (mesh_.foundObject<volVectorField>("cellMotionU"))
-    //~ {
-    	//~ const volVectorField& cellVelocity_(mesh_.lookupObject<volVectorField>("cellMotionU"));
-    	//~ *dPenal_ = (cellVelocity_.oldTime()-cellVelocity_.oldTime().oldTime())/(1*mesh_.time().deltaT().value());
-    //~ }
-    //~ else if (mesh_.foundObject<volVectorField>("cellDisplacement"))
-    //~ {
-    	//~ const volVectorField& cellDisplacement_(mesh_.lookupObject<volVectorField>("cellDisplacement"));
-    	//~ *dPenal_ = (cellDisplacement_-2*cellDisplacement_.oldTime()+cellDisplacement_.oldTime().oldTime())/(2*mesh_.time().deltaT().value());
-
-//    	Info << "cellDisplacement_: " << cellDisplacement_ << endl;
-//    	Info << "cellDisplacement_: " << cellDisplacement_.oldTime() << endl;
-//    	Info << "cellDisplacement_: " << cellDisplacement_.oldTime().oldTime() << endl;
-    //~ }
-
-
+    // Scale pRef
+	Foam::scalar pRef = pRef_/rho(tp);
 
     int bufferIndex = 0;
 
@@ -253,34 +279,24 @@ void preciceAdapter::FSI::Force::write(double * buffer, bool meshConnectivity, c
 
         int patchID = patchIDs_.at(j);
 
-        //~ // pressure penalty
-        //~ scalarField pPenal = rhoTmp.boundaryField()[patchID] * (mesh_.boundary()[patchID].nf() & dPenal_->boundaryField()[patchID]);
-
-        //~ Foam::scalar penalFac = forceStabFac_;
-
-        //scalarField pBC = p.boundaryField()[patchID]; // + penalFac * pPenal;
-
-//        Info << "pressure penalty: " << endl;
-//        Info << penalFac * pPenal << endl;
-
         // Pressure forces
-        if (solverType_.compare("incompressible") == 0)
-        {
+        //~ if (solverType_.compare("incompressible") == 0)
+        //~ {
             Force_->boundaryFieldRef()[patchID] =
-                Sfb[patchID] * (pb[patchID] - pRef_) * rhob[patchID];
-        }
-        else if (solverType_.compare("compressible") == 0)
-        {
-            Force_->boundaryFieldRef()[patchID] =
-                Sfb[patchID] * (pb[patchID] - pRef_);
-        }
-        else
-        {
-            FatalErrorInFunction
-                << "Forces calculation does only support "
-                << "compressible or incompressible solver type."
-                << exit(FatalError);
-        }
+                rho(tp) * Sfb[patchID] * (pb[patchID] - pRef) ;
+        //~ }
+        //~ else if (solverType_.compare("compressible") == 0)
+        //~ {
+            //~ Force_->boundaryFieldRef()[patchID] =
+                //~ Sfb[patchID] * (pb[patchID] - pRef_);
+        //~ }
+        //~ else
+        //~ {
+            //~ FatalErrorInFunction
+                //~ << "Forces calculation does only support "
+                //~ << "compressible or incompressible solver type."
+                //~ << exit(FatalError);
+        //~ }
 
         // Viscous forces
         Force_->boundaryFieldRef()[patchID] +=
